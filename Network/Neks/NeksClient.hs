@@ -25,6 +25,7 @@ main = Net.withSocketsDo $ do
                                 ["--set", k, v] -> set k v server
                                 ["--setIfNew", k, v] -> setIfNew k v server
                                 ["--get", k]    -> get k server
+                                ["--del", k]    -> del k server
                                 ["--test"]      -> test host portID
                                 _               -> putStrLn instructions
                 ["--help"] -> putStrLn instructions -- To be explicit
@@ -57,6 +58,13 @@ get k server = do
                 Left error -> putStrLn ("Error getting value: " ++ error)
                 Right response -> putStrLn ("Response received: " ++ show response)
 
+del :: String -> Handle -> IO ()
+del k server = do
+        response <- request server [Delete (pack k)]
+        case response of
+                Left error -> putStrLn ("Error deleting value: " ++ error)
+                Right [] -> putStrLn "Delete successful"
+
 test :: String -> Net.PortID -> IO ()
 test host port = do
         putStrLn "Spawning 50 threads x 200 requests x 100 transactions"
@@ -76,4 +84,4 @@ testKeys = ["66991fb944", "afe0c0261a", "a4242d5dda", "d10db90845", "4384ecbfe",
 testValues = ["5e7a195e90", "accdfc69c4", "43be950623", "afed0a6890", "0d23711bcf", "3b3d9b4043", "139ba09036", "a54b56630d", "61a729c150", "34891805ca", "d3dc68c9d3", "e1b4943d72", "8731015486", "f8f626c071", "4262ca1f24", "3c55632f50", "d32b8b30ca", "3311af7221", "29144d27ea", "0e0f97257e", "d6a2e1086", "aae1906c17", "d57f58433f", "9232138b5e", "fd1711214f", "84a66c50ac", "9b65ffc322", "d2d447396e", "6fc6c53265", "5183bca85", "884a5cc1cf", "7914d452ae", "6e2a351fd8", "7fb80954be", "3c3f1bf0cd", "112e60a719", "4917c12e1c", "9aaf5cc6d1", "7ccd97a418", "48c91da08c", "349524f781", "7d248047c", "9bfec0c3a4", "c0de587385", "216dd64a29", "eac5049f63", "133a259613", "843e1f1ee3", "e9c11331c0", "48e720933e"]
 
 instructions = "Usage: NeksClient <host> <port> <args>\n" ++
-                           "<args> are \"--test\", \"--get <key>\", or \"--set <key> <value>\""
+  "<args> are \"--test\", \"--get <key>\", \"--del <key>\", \"--set <key> <value>\", or \"--setIfNew <key> <value>\""
