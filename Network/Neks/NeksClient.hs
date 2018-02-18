@@ -4,7 +4,7 @@ module Main where
 
 import Network.Neks.Message (formatRequests, parseResponses)
 import Network.Neks.NetPack (netWrite, netRead)
-import Network.Neks.Actions (Request(Set, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
 
 import qualified Network as Net
 import System.IO (Handle)
@@ -18,11 +18,12 @@ import Control.Concurrent.MVar (MVar, newEmptyMVar, takeMVar, putMVar)
 main = Net.withSocketsDo $ do
         args <- getArgs
         case args of
-                (host:port:command) -> do 
+                (host:port:command) -> do
                         let portID = Net.PortNumber . fromInteger . read $ port
                         server <- Net.connectTo host portID
                         case command of
                                 ["--set", k, v] -> set k v server
+                                ["--setIfNew", k, v] -> setIfNew k v server
                                 ["--get", k]    -> get k server
                                 ["--test"]      -> test host portID
                                 _               -> putStrLn instructions
@@ -41,6 +42,13 @@ set k v server = do
         case response of
                 Left error -> putStrLn ("Error setting value: " ++ error)
                 Right [] -> putStrLn "Set successful"
+
+setIfNew :: String -> String -> Handle -> IO ()
+setIfNew k v server = do
+        response <- request server [SetIfNew (pack k) (pack v)]
+        case response of
+                Left error -> putStrLn ("Error setting value: " ++ error)
+                Right response -> putStrLn ("Response received: " ++ show response)
 
 get :: String -> Handle -> IO ()
 get k server = do

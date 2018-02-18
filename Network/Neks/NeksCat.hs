@@ -4,14 +4,9 @@ module Main where
 import System.IO (hPutStrLn, stderr)
 import System.Environment (getArgs)
 import Data.ByteString (ByteString)
-import Data.List (sort)
-import qualified Data.Map as Map (toList)
-
-import Control.Concurrent.STM (atomically)
-
 
 import Network.Neks.Disk (loadFrom)
-import Network.Neks.DataStore (DataStore, dump)
+import Network.Neks.DataStore (DataStore, catDataStore)
 
 type Store = DataStore ByteString ByteString
 
@@ -29,11 +24,7 @@ catDataStoreFile storeFile = do
         loaded <- loadFrom storeFile
         case loaded of
                 Nothing -> hPutStrLn stderr $ "Could not load from " ++ storeFile
-                Just (store :: Store) -> do
-                   maps <- atomically $ dump store
-                   let kvs = sort $ Map.toList =<< maps
-                       showKV (k, v) = shows k $ "\t\t" ++ show v
-                   mapM_ (putStrLn . showKV) kvs
+                Just store -> catDataStore (store :: Store)
 
 instructions :: String
 instructions = "Usage: NeksCat <opt-args>\n" ++

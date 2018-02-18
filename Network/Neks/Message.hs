@@ -4,7 +4,7 @@ module Network.Neks.Message (
 ) where
 
 import Data.ByteString (ByteString)
-import Network.Neks.Actions (Request(Set, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
 import qualified Data.Serialize as Serialize
 import Data.MessagePack (Object(ObjectArray, ObjectInt, ObjectBinary))
 import Control.Applicative ((<$>))
@@ -14,6 +14,7 @@ formatRequests = Serialize.encode . ObjectArray . map format
         where format request = ObjectArray $ case request of
                 Get k           -> [ObjectInt 0, ObjectBinary k]
                 Set k v         -> [ObjectInt 1, ObjectBinary k, ObjectBinary v]
+                SetIfNew k v    -> [ObjectInt 4, ObjectBinary k, ObjectBinary v]
                 Delete k        -> [ObjectInt 2, ObjectBinary k]
                 Atomic requests -> [ObjectInt 3, ObjectArray (map format requests)]
 
@@ -31,6 +32,7 @@ parseRequests :: ByteString -> Either String [Request]
 parseRequests bs = decode bs >>= mapM parse where
         parse (ObjectArray [ObjectInt 0, ObjectBinary k]) = Right (Get k)
         parse (ObjectArray [ObjectInt 1, ObjectBinary k, ObjectBinary v]) = Right (Set k v)
+        parse (ObjectArray [ObjectInt 4, ObjectBinary k, ObjectBinary v]) = Right (SetIfNew k v)
         parse (ObjectArray [ObjectInt 2, ObjectBinary k]) = Right (Delete k)
         parse (ObjectArray [ObjectInt 3, ObjectArray requests]) = Atomic <$> mapM parse requests
         parse _ = Left "Invalid request structure"

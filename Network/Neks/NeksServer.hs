@@ -7,12 +7,12 @@ import Data.ByteString (ByteString)
 import Control.Monad (forever, unless)
 import Control.Concurrent.STM (STM, atomically)
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
-import Control.Exception (SomeException, catch, finally) 
+import Control.Exception (SomeException, catch, finally)
 import Network.Neks.Disk (saveTo, loadFrom)
 import Network.Neks.NetPack (netRead, netWrite)
 import Network.Neks.Message (parseRequests, formatResponses)
-import Network.Neks.DataStore (DataStore, createStore, insert, get, delete)
-import Network.Neks.Actions (Request(Set, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, get, delete)
+import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
 
 type Store = DataStore ByteString ByteString
 
@@ -25,14 +25,19 @@ main = do
                 _          -> putStrLn instructions
 
 serveWithPersistence = do
-        loaded <- loadFrom "store.kvs"
+        let storeFile = "store.kvs"
+            port = 9999
+            delaySeconds = 30
+        loaded <- loadFrom storeFile
         globalStore <- case loaded of
                 Just store -> return store
                 Nothing -> atomically createStore
-        let periodically action = forever (threadDelay (30*10^6) >> action)
-        forkIO $ periodically (saveTo "store.kvs" globalStore)
-        putStrLn "Serving on port 9999 \nSaving DB to store.kvs"
-        serve globalStore (Net.PortNumber 9999)
+        let periodically action = forever
+                (threadDelay (delaySeconds*10^6) >> action)
+        forkIO $ periodically (saveTo storeFile globalStore)
+        putStrLn  . ("Serving on port " ++) . shows port
+                  $ "\nSaving DB to " ++ storeFile
+        serve globalStore (Net.PortNumber port)
 
 serveWithoutPersistence = do
         globalStore <- atomically createStore
@@ -74,6 +79,11 @@ processWith :: Store -> Request -> STM [Reply]
 processWith store (Set k v) = do
         insert k v store
         return []
+processWith store (SetIfNew k v) = do
+        result <- insertIfNew k v store
+        return $ case result of
+                Nothing -> [NotFound]
+                Just v0 -> [Found v0]
 processWith store (Get k) = do
         result <- get k store
         return $ case result of
