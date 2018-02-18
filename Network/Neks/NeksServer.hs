@@ -11,8 +11,9 @@ import Control.Exception (SomeException, catch, finally)
 import Network.Neks.Disk (saveTo, loadFrom)
 import Network.Neks.NetPack (netRead, netWrite)
 import Network.Neks.Message (parseRequests, formatResponses)
-import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, get, delete)
+import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, get, delete, catDataStore)
 import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
+import System.Posix.Signals (userDefinedSignal1, installHandler, Handler(Catch))
 
 type Store = DataStore ByteString ByteString
 
@@ -45,7 +46,9 @@ serveWithoutPersistence = do
         serve globalStore (Net.PortNumber 9999)
 
 serve :: Store -> Net.PortID -> IO ()
-serve store port = Net.withSocketsDo $ do
+serve store port = do
+      _ <- installHandler userDefinedSignal1 (Catch $ catDataStore store) Nothing
+      Net.withSocketsDo $ do
         sock <- Net.listenOn port
         forever (wait sock store)
 
