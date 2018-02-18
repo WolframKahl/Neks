@@ -32,6 +32,7 @@ executable NeksClient
                        network >= 2.4.2.3,
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
+                       time >= 1.5.0,
                        directory >= 1.2.1.0
   default-language:    Haskell2010
   ghc-options:         -O2
@@ -50,6 +51,7 @@ executable NeksServer
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
                        directory >= 1.2.1.0,
+                       time >= 1.5.0,
                        unix >= 2.7.1
   default-language:    Haskell2010
   ghc-options:         -O2 -threaded -with-rtsopts=-N2
@@ -67,6 +69,7 @@ executable NeksCat
                        -- network >= 2.4.2.3,
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
+                       time >= 1.5.0,
                        directory >= 1.2.1.0
   default-language:    Haskell2010
   ghc-options:         -O2 -threaded -with-rtsopts=-N2
@@ -90,6 +93,7 @@ library
                        network >= 2.4.2.3,
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
+                       time >= 1.5.0,
                        directory >= 1.2.1.0
   default-language:    Haskell2010
   ghc-options:         -O2

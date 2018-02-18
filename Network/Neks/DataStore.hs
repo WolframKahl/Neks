@@ -10,6 +10,7 @@ import Data.Vector as Vector (Vector, fromList, toList, mapM, (!))
 import Data.Bits ((.&.))
 import Data.List (sortBy)
 import Data.Function (on)
+import Data.Time.LocalTime (getZonedTime)
 
 newtype DataStore k v = DataStore {mapsOf :: Vector (TMVar (Map.Map k v))}
 
@@ -55,6 +56,8 @@ load = fmap DataStore . Vector.mapM newTMVar . fromList
 catDataStore :: (Show k, Show v, Ord k) => DataStore k v -> IO ()
 catDataStore store = do
         maps <- atomically $ dump store
+        zt <- getZonedTime
         let  kvs = sortBy (compare `on` fst) $ Map.toList =<< maps
              showKV (k, v) = shows k $ "\t\t" ++ show v
-        mapM_ (putStrLn . showKV) kvs
+        mapM_ putStrLn  . ("" :) . ((:) $ "Neks.DataStore at " ++ show zt)
+                        $ map showKV kvs
