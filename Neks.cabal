@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                Neks
-version:             0.5.0.0
+version:             0.6.0.0
 synopsis:            Simple networked key/value store
 description:         Neks is a fast, simple in-memory key/value server.
 license:             MIT
@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 source-repository head
   type:     git
-  location: https://github.com/wyager/Neks.git
+  location: https://github.com/WolframKahl/Neks.git
 
 executable NeksClient
   main-is: Network/Neks/NeksClient.hs
