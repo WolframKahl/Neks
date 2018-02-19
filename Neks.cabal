@@ -84,6 +84,7 @@ library
                        Network.Neks.Disk
                        Network.Neks.Message
                        Network.Neks.NetPack
+                       Network.Neks.Client
   build-depends:       base >=4.6,
                        messagepack >= 0.2.1,
                        bytestring >= 0.10.4.0,
