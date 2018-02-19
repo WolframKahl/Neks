@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 module Main where
 
 import qualified Network as Net
@@ -18,16 +19,17 @@ import System.Posix.Signals (userDefinedSignal1, installHandler, Handler(Catch))
 type Store = DataStore ByteString ByteString
 
 main = do
-        args <- getArgs
-        case args of
-                [] -> serveWithPersistence
-                ["--no-persistence"] -> serveWithoutPersistence
-                ["--help"] -> putStrLn instructions -- To be explicit
-                _          -> putStrLn instructions
+  args <- getArgs
+  case args of
+    [] -> serveWithPersistence 9999
+    ["--port", prt] | [(port, "")] <- reads prt -> serveWithPersistence port
+    ["--no-persistence"] -> serveWithoutPersistence
+    ["--help"] -> putStrLn instructions -- To be explicit
+    _          -> putStrLn instructions
 
-serveWithPersistence = do
+serveWithPersistence :: Net.PortNumber -> IO ()
+serveWithPersistence port = do
         let storeFile = "store.kvs"
-            port = 9999
             delaySeconds = 30
         loaded <- loadFrom storeFile
         globalStore <- case loaded of
