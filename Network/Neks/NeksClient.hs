@@ -14,11 +14,17 @@ import Data.ByteString.Char8 (pack)
 import Control.Monad (when)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, takeMVar, putMVar)
+import Exception(IOException, catch)
+
+catchIO :: IO a -> (IOException -> IO a) -> IO a
+catchIO = Exception.catch
 
 main = Net.withSocketsDo $ do
         args <- getArgs
         case args of
                 (host:port:command) -> do
+                  catchIO
+                    (do
                         let portID = Net.PortNumber . fromInteger . read $ port
                         server <- Net.connectTo host portID
                         case command of
@@ -28,6 +34,9 @@ main = Net.withSocketsDo $ do
                                 ["--del", k]    -> del k server
                                 ["--test"]      -> test host portID
                                 _               -> putStrLn instructions
+                    )
+                    (\ e -> putStrLn $ "There was a problem: " ++ show e)
+                  putStrLn "NeksClient finished."
                 ["--help"] -> putStrLn instructions -- To be explicit
                 _          -> putStrLn instructions
 

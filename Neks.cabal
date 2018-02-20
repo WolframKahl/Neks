@@ -33,7 +33,8 @@ executable NeksClient
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
                        time >= 1.5.0,
-                       directory >= 1.2.1.0
+                       directory >= 1.2.1.0,
+                       ghc >= 7.10.3
   default-language:    Haskell2010
   ghc-options:         -O2
 
@@ -96,6 +97,7 @@ library
                        vector >= 0.10.9.1,
                        hashable >= 0.1.0.0,
                        time >= 1.5.0,
-                       directory >= 1.2.1.0
+                       directory >= 1.2.1.0,
+                       ghc >= 7.10.3
   default-language:    Haskell2010
   ghc-options:         -O2

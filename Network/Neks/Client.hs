@@ -12,6 +12,7 @@ import qualified Network as Net (connectTo)
 import System.IO (Handle, hClose)
 -- import Data.ByteString.Char8 (pack)
 import Data.ByteString (ByteString)
+import Exception(IOException, catch)
 
 -- let portID = Net.PortNumber . fromInteger . read $ port
 
@@ -76,11 +77,17 @@ del' k server = genDel (request server) k
 -- The following interface uses single-request connections:
 
 sendRequestsHP :: HostName -> PortID -> SendRequests
-sendRequestsHP host portID requests = do
+sendRequestsHP host portID requests = catchIO
+  (do
         handle <- Net.connectTo host portID
         e <- request handle requests
         hClose handle
         return e
+  )
+  (\ e -> return . Left $ show e)
+
+catchIO :: IO a -> (IOException -> IO a) -> IO a
+catchIO = Exception.catch
 
 set :: HostName -> PortID -> ByteString -> ByteString -> IO (Either String ())
 set host portID = genSet (sendRequestsHP host portID)
