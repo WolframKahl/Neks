@@ -16,21 +16,38 @@ import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, get,
 import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
 import System.Posix.Signals (userDefinedSignal1, installHandler, Handler(Catch))
 
+import Control.Applicative (pure, (<*>))
+import Control.Arrow (first)
+import Options
+
 type Store = DataStore ByteString ByteString
 
-main = do
-  args <- getArgs
-  case args of
-    [] -> serveWithPersistence 9999
-    ["--port", prt] | [(port, "")] <- reads prt -> serveWithPersistence port
-    ["--no-persistence"] -> serveWithoutPersistence
-    ["--help"] -> putStrLn instructions -- To be explicit
-    _          -> putStrLn instructions
+data MainOptions = MainOptions
+    { optNoPersistence :: Bool
+    , optPort :: Integer
+    , optKVFile :: FilePath
+    }
 
-serveWithPersistence :: Net.PortNumber -> IO ()
-serveWithPersistence port = do
-        let storeFile = "store.kvs"
-            delaySeconds = 30
+instance Options MainOptions where
+    defineOptions = pure MainOptions
+        <*> simpleOption "no-persistence" False
+            "Disable storing keys and values on disk."
+        <*> simpleOption "port" 9999
+            "Server port."
+        <*> simpleOption "kvs" "store.kvs"
+            "File for persistent storage."
+
+main :: IO ()
+main = runCommand $ \ opts _args -> let
+    port = fromInteger $ optPort opts
+    kvs = optKVFile opts
+  in if optNoPersistence opts
+  then serveWithoutPersistence port
+  else serveWithPersistence kvs port
+
+serveWithPersistence :: FilePath -> Net.PortNumber -> IO ()
+serveWithPersistence storeFile port = do
+        let delaySeconds = 30
         loaded <- loadFrom storeFile
         globalStore <- case loaded of
                 Just store -> return store
@@ -42,10 +59,11 @@ serveWithPersistence port = do
                   $ "\nSaving DB to " ++ storeFile
         serve globalStore (Net.PortNumber port)
 
-serveWithoutPersistence = do
+serveWithoutPersistence :: Net.PortNumber -> IO ()
+serveWithoutPersistence port = do
         globalStore <- atomically createStore
-        putStrLn "Serving on port 9999\nNot persisting to disk"
-        serve globalStore (Net.PortNumber 9999)
+        putStrLn $ "Serving on port " ++ shows port "\nNot persisting to disk"
+        serve globalStore (Net.PortNumber port)
 
 serve :: Store -> Net.PortID -> IO ()
 serve store port = do
