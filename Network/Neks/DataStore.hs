@@ -1,10 +1,10 @@
 module Network.Neks.DataStore (
-        DataStore, createStore, dump, load, insert, insertIfNew, get, delete, catDataStore
+        DataStore, createStore, createStoreIO, dump, load, loadIO, insert, insertIfNew, get, delete, catDataStore
 ) where
 
 import qualified Data.Map.Strict as Map (Map, empty, insert, lookup, delete, toList)
 import Control.Concurrent.STM (STM, atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newTMVar, takeTMVar, putTMVar, readTMVar)
+import Control.Concurrent.STM.TMVar (TMVar, newTMVar, newTMVarIO, takeTMVar, putTMVar, readTMVar)
 import Data.Hashable (Hashable, hash)
 import Data.Vector as Vector (Vector, fromList, toList, mapM, (!))
 import Data.Bits ((.&.))
@@ -16,6 +16,9 @@ newtype DataStore k v = DataStore {mapsOf :: Vector (TMVar (Map.Map k v))}
 
 createStore :: STM (DataStore k v)
 createStore = load [Map.empty | _ <- [0..4096]]
+
+createStoreIO :: IO (DataStore k v)
+createStoreIO = loadIO [Map.empty | _ <- [0..4096]]
 
 insert :: (Hashable k, Ord k) => k -> v -> DataStore k v -> STM ()
 insert k v (DataStore maps) = do
@@ -52,6 +55,9 @@ dump = Prelude.mapM readTMVar . toList . mapsOf
 
 load :: [Map.Map k v] -> STM (DataStore k v)
 load = fmap DataStore . Vector.mapM newTMVar . fromList
+
+loadIO :: [Map.Map k v] -> IO (DataStore k v)
+loadIO = fmap DataStore . Vector.mapM newTMVarIO . fromList
 
 catDataStore :: (Show k, Show v, Ord k) => DataStore k v -> IO ()
 catDataStore store = do
