@@ -1,5 +1,5 @@
 module Network.Neks.DataStore (
-        DataStore, createStore, createStoreIO, dump, load, loadIO, insert, insertIfNew, get, delete, catDataStore
+        DataStore, createStore, createStoreIO, dump, load, loadIO, insert, insertIfNew, combine, get, delete, catDataStore
 ) where
 
 import qualified Data.Map.Strict as Map (Map, empty, insert, lookup, delete, toList)
@@ -15,40 +15,52 @@ import Data.Time.LocalTime (getZonedTime)
 newtype DataStore k v = DataStore {mapsOf :: Vector (TMVar (Map.Map k v))}
 
 createStore :: STM (DataStore k v)
-createStore = load [Map.empty | _ <- [0..4096]]
+createStore = load [Map.empty | _ <- [0..4096 :: Int]]
 
 createStoreIO :: IO (DataStore k v)
-createStoreIO = loadIO [Map.empty | _ <- [0..4096]]
+createStoreIO = loadIO [Map.empty | _ <- [0..4096 :: Int]]
 
 insert :: (Hashable k, Ord k) => k -> v -> DataStore k v -> STM ()
 insert k v (DataStore maps) = do
         let atomicMap = maps ! (hash k .&. 0xFFF)
-        map <- takeTMVar atomicMap
-        putTMVar atomicMap $! Map.insert k v map
+        map0 <- takeTMVar atomicMap
+        putTMVar atomicMap $! Map.insert k v map0
 
 insertIfNew :: (Hashable k, Ord k) => k -> v -> DataStore k v -> STM (Maybe v)
 insertIfNew k v (DataStore maps) = do
         let atomicMap = maps ! (hash k .&. 0xFFF)
-        map <- takeTMVar atomicMap
-        case Map.lookup k map of
+        map0 <- takeTMVar atomicMap
+        case Map.lookup k map0 of
           Nothing -> do
-            putTMVar atomicMap $! Map.insert k v map
+            putTMVar atomicMap $! Map.insert k v map0
             return Nothing
           r@(Just _v0) -> do
-            putTMVar atomicMap map
+            putTMVar atomicMap map0
             return r
+
+combine :: (Hashable k, Ord k) => (v -> v -> v) -> k -> v -> DataStore k v -> STM ()
+combine f k v (DataStore maps) = do
+        let atomicMap = maps ! (hash k .&. 0xFFF)
+        map0 <- takeTMVar atomicMap
+        case Map.lookup k map0 of
+          Nothing -> do
+            putTMVar atomicMap $! Map.insert k v map0
+            return ()
+          Just v0 -> do
+            putTMVar atomicMap $! Map.insert k (f v0 v) map0
+            return ()
 
 get :: (Hashable k, Ord k) => k -> DataStore k v -> STM (Maybe v)
 get k (DataStore maps) = do
         let atomicMap = maps ! (hash k .&. 0xFFF)
-        map <- readTMVar atomicMap
-        return (Map.lookup k map)
+        map0 <- readTMVar atomicMap
+        return (Map.lookup k map0)
 
 delete :: (Hashable k, Ord k) => k -> DataStore k v -> STM ()
 delete k (DataStore maps) = do
         let atomicMap = maps ! (hash k .&. 0xFFF)
-        map <- takeTMVar atomicMap
-        putTMVar atomicMap $! Map.delete k map
+        map0 <- takeTMVar atomicMap
+        putTMVar atomicMap $! Map.delete k map0
 
 dump :: DataStore k v -> STM [Map.Map k v]
 dump = Prelude.mapM readTMVar . toList . mapsOf

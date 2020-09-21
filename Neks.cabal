@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                Neks
-version:             0.6.0.0
+version:             0.6.1
 synopsis:            Simple networked key/value store
 description:         Neks is a fast, simple in-memory key/value server.
 license:             MIT
@@ -101,3 +101,7 @@ library
                        ghc >= 7.10.3
   default-language:    Haskell2010
   ghc-options:         -O2
+                       -Wall
+                       -fno-warn-orphans
+                       -fwarn-incomplete-patterns
+                       -fwarn-unused-imports

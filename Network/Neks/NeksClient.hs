@@ -4,7 +4,7 @@ module Main where
 
 import Network.Neks.Message (formatRequests, parseResponses)
 import Network.Neks.NetPack (netWrite, netRead)
-import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.Actions (Request(Set, SetIfNew, Append, Get, Delete, Atomic), Reply(Found, NotFound))
 
 import qualified Network as Net
 import System.IO (Handle)
@@ -30,6 +30,7 @@ main = Net.withSocketsDo $ do
                         case command of
                                 ["--set", k, v] -> set k v server
                                 ["--setIfNew", k, v] -> setIfNew k v server
+                                ["--append", k, v] -> append k v server
                                 ["--get", k]    -> get k server
                                 ["--del", k]    -> del k server
                                 ["--test"]      -> test host portID
@@ -59,6 +60,13 @@ setIfNew k v server = do
         case response of
                 Left error -> putStrLn ("Error setting value: " ++ error)
                 Right response -> putStrLn ("Response received: " ++ show response)
+
+append :: String -> String -> Handle -> IO ()
+append k v server = do
+        response <- request server [Append (pack k) (pack v)]
+        case response of
+                Left error -> putStrLn ("Error appending value: " ++ error)
+                Right [] -> putStrLn "Append successful"
 
 get :: String -> Handle -> IO ()
 get k server = do
@@ -93,4 +101,4 @@ testKeys = ["66991fb944", "afe0c0261a", "a4242d5dda", "d10db90845", "4384ecbfe",
 testValues = ["5e7a195e90", "accdfc69c4", "43be950623", "afed0a6890", "0d23711bcf", "3b3d9b4043", "139ba09036", "a54b56630d", "61a729c150", "34891805ca", "d3dc68c9d3", "e1b4943d72", "8731015486", "f8f626c071", "4262ca1f24", "3c55632f50", "d32b8b30ca", "3311af7221", "29144d27ea", "0e0f97257e", "d6a2e1086", "aae1906c17", "d57f58433f", "9232138b5e", "fd1711214f", "84a66c50ac", "9b65ffc322", "d2d447396e", "6fc6c53265", "5183bca85", "884a5cc1cf", "7914d452ae", "6e2a351fd8", "7fb80954be", "3c3f1bf0cd", "112e60a719", "4917c12e1c", "9aaf5cc6d1", "7ccd97a418", "48c91da08c", "349524f781", "7d248047c", "9bfec0c3a4", "c0de587385", "216dd64a29", "eac5049f63", "133a259613", "843e1f1ee3", "e9c11331c0", "48e720933e"]
 
 instructions = "Usage: NeksClient <host> <port> <args>\n" ++
-  "<args> are \"--test\", \"--get <key>\", \"--del <key>\", \"--set <key> <value>\", or \"--setIfNew <key> <value>\""
+  "<args> are \"--test\", \"--get <key>\", \"--del <key>\", \"--set <key> <value>\",  \"--setIfNew <key> <value>\", or \"--append <key> <value>\""

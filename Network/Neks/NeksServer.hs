@@ -4,7 +4,9 @@ module Main where
 import qualified Network as Net
 import System.IO (Handle, hClose)
 import System.Environment (getArgs)
+import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
+import qualified Data.Char as Char
 import Control.Monad (forever, unless)
 import Control.Concurrent.STM (STM, atomically)
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
@@ -12,8 +14,8 @@ import Control.Exception (SomeException, catch, finally)
 import Network.Neks.Disk (saveTo, loadFrom)
 import Network.Neks.NetPack (netRead, netWrite)
 import Network.Neks.Message (parseRequests, formatResponses)
-import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, get, delete, catDataStore)
-import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.DataStore (DataStore, createStore, insert, insertIfNew, combine, get, delete, catDataStore)
+import Network.Neks.Actions (Request(Set, SetIfNew, Append, Get, Delete, Atomic), Reply(Found, NotFound))
 import System.Posix.Signals (userDefinedSignal1, installHandler, Handler(Catch))
 
 import Control.Applicative (pure, (<*>))
@@ -107,6 +109,11 @@ processWith store (SetIfNew k v) = do
         return $ case result of
                 Nothing -> [NotFound]
                 Just v0 -> [Found v0]
+processWith store (Append k v) = do
+        combine cat k v store
+        return []
+   where
+      cat x y =  BS.append x $ BS.cons (fromIntegral $ Char.ord '\n') y
 processWith store (Get k) = do
         result <- get k store
         return $ case result of

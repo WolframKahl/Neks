@@ -14,11 +14,11 @@ netRead :: Handle -> IO (Either String ByteString)
 netRead hdl = do
         lengthBytes <- hGet hdl 8
         case decode lengthBytes of
-                Left err -> return (Left "Network stream ended while reading length")
-                Right len  | len < (10^6 :: Word64) -> readData (fromIntegral len)
+                Left _err -> return (Left "Network stream ended while reading length")
+                Right len  | len < (10^(6 :: Word) :: Word64) -> readData (fromIntegral len)
                            | otherwise -> return (Left "Message too long")
-        where readData length = do
-                dataBytes <- hGet hdl length
-                if BS.length dataBytes /= length
+        where readData len = do
+                dataBytes <- hGet hdl len
+                if BS.length dataBytes /= len
                         then return (Left "Connection dropped during message read")
                         else return (Right dataBytes)

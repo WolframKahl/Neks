@@ -4,10 +4,10 @@ module Network.Neks.Message (
 ) where
 
 import Data.ByteString (ByteString)
-import Network.Neks.Actions (Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound))
+import Network.Neks.Actions (Request(Set, SetIfNew, Append, Get, Delete, Atomic), Reply(Found, NotFound))
 import qualified Data.Serialize as Serialize
 import Data.MessagePack (Object(ObjectArray, ObjectInt, ObjectBinary))
-import Control.Applicative ((<$>))
+-- import Control.Applicative ((<$>))
 
 formatRequests :: [Request] -> ByteString
 formatRequests = Serialize.encode . ObjectArray . map format
@@ -15,6 +15,7 @@ formatRequests = Serialize.encode . ObjectArray . map format
                 Get k           -> [ObjectInt 0, ObjectBinary k]
                 Set k v         -> [ObjectInt 1, ObjectBinary k, ObjectBinary v]
                 SetIfNew k v    -> [ObjectInt 4, ObjectBinary k, ObjectBinary v]
+                Append k v    -> [ObjectInt 5, ObjectBinary k, ObjectBinary v]
                 Delete k        -> [ObjectInt 2, ObjectBinary k]
                 Atomic requests -> [ObjectInt 3, ObjectArray (map format requests)]
 
@@ -24,15 +25,17 @@ formatResponses = Serialize.encode . ObjectArray . map format
                 Found v  -> [ObjectInt (-1), ObjectBinary v]
                 NotFound -> [ObjectInt (-2)]
 
+decode :: ByteString -> Either String [Object]
 decode bs = case Serialize.decode bs of
         Right (ObjectArray messages) -> Right messages
-        error -> Left "Response decode failure"
+        _error -> Left "Response decode failure"
 
 parseRequests :: ByteString -> Either String [Request]
 parseRequests bs = decode bs >>= mapM parse where
         parse (ObjectArray [ObjectInt 0, ObjectBinary k]) = Right (Get k)
         parse (ObjectArray [ObjectInt 1, ObjectBinary k, ObjectBinary v]) = Right (Set k v)
         parse (ObjectArray [ObjectInt 4, ObjectBinary k, ObjectBinary v]) = Right (SetIfNew k v)
+        parse (ObjectArray [ObjectInt 5, ObjectBinary k, ObjectBinary v]) = Right (Append k v)
         parse (ObjectArray [ObjectInt 2, ObjectBinary k]) = Right (Delete k)
         parse (ObjectArray [ObjectInt 3, ObjectArray requests]) = Atomic <$> mapM parse requests
         parse _ = Left "Invalid request structure"

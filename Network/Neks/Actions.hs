@@ -1,5 +1,5 @@
 module Network.Neks.Actions (
-        Request(Set, SetIfNew, Get, Delete, Atomic), Reply(Found, NotFound)
+        Request(Set, SetIfNew, Append, Get, Delete, Atomic), Reply(Found, NotFound)
 ) where
 
 import Data.ByteString (ByteString)
@@ -7,6 +7,7 @@ import Data.ByteString (ByteString)
 data Request
   = Set ByteString ByteString
   | SetIfNew ByteString ByteString -- returns |Reply| as |Get|
+  | Append ByteString ByteString
   | Get ByteString
   | Delete ByteString
   | Atomic [Request]

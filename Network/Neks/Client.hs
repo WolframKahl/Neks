@@ -4,7 +4,7 @@ module Network.Neks.Client where
 
 import Network.Neks.Message (formatRequests, parseResponses)
 import Network.Neks.NetPack (netWrite, netRead)
-import Network.Neks.Actions ( Request(Set, SetIfNew, Get, Delete, Atomic)
+import Network.Neks.Actions ( Request(Set, SetIfNew, Append, Get, Delete) -- Atomic
                             , Reply(Found, NotFound) )
 
 import Network (HostName, PortID)
@@ -22,7 +22,7 @@ genSet :: SendRequests -> ByteString -> ByteString -> IO (Either String ())
 genSet sendRequests k v = do
         response <- sendRequests [Set k v]
         return $ case response of
-                Left error -> Left $ "set: Error: " ++ error
+                Left err -> Left $ "set: Error: " ++ err
                 Right [] -> Right ()
                 Right rs -> Left $ "set: Unexpected response: " ++ show rs
 
@@ -30,17 +30,25 @@ genSetIfNew :: SendRequests -> ByteString -> ByteString -> IO (Either String (Ma
 genSetIfNew sendRequests k v = do
         response <- sendRequests [SetIfNew k v]
         return $ case response of
-                Left error -> Left $ "setIfNew: Error: " ++ error
+                Left err -> Left $ "setIfNew: Error: " ++ err
                 Right [r] -> Right $ case r of
                   Found bs -> Just bs
                   NotFound -> Nothing
                 Right rs -> Left $ "setIfNew: Unexpected response: " ++ show rs
 
+genAppend :: SendRequests -> ByteString -> ByteString -> IO (Either String ())
+genAppend sendRequests k v = do
+        response <- sendRequests [Append k v]
+        return $ case response of
+                Left err -> Left $ "append: Error: " ++ err
+                Right [] -> Right ()
+                Right rs -> Left $ "append: Unexpected response: " ++ show rs
+
 genGet :: SendRequests -> ByteString -> IO (Either String (Maybe ByteString))
 genGet sendRequests k = do
         response <- sendRequests [Get k]
         return $ case response of
-                Left error -> Left $ "get: Error: " ++ error
+                Left err -> Left $ "get: Error: " ++ err
                 Right [r] -> Right $ case r of
                   Found bs -> Just bs
                   NotFound -> Nothing
@@ -50,7 +58,7 @@ genDel :: SendRequests -> ByteString -> IO (Either String ())
 genDel sendRequests k = do
         response <- sendRequests [Delete k]
         return $ case response of
-                Left error -> Left $ "del: Error: " ++ error
+                Left err -> Left $ "del: Error: " ++ err
                 Right [] -> Right ()
                 Right rs -> Left $ "del: Unexpected response: " ++ show rs
 
@@ -67,6 +75,9 @@ set' k v server = genSet (request server) k v
 
 setIfNew' :: ByteString -> ByteString -> Handle -> IO (Either String (Maybe ByteString))
 setIfNew' k v server = genSetIfNew (request server) k v
+
+append' :: ByteString -> ByteString -> Handle -> IO (Either String ())
+append' k v server = genAppend (request server) k v
 
 get' :: ByteString -> Handle -> IO (Either String (Maybe ByteString))
 get' k server = genGet (request server) k
@@ -94,6 +105,9 @@ set host portID = genSet (sendRequestsHP host portID)
 
 setIfNew :: HostName -> PortID -> ByteString -> ByteString -> IO (Either String (Maybe ByteString))
 setIfNew host portID = genSetIfNew (sendRequestsHP host portID)
+
+append :: HostName -> PortID -> ByteString -> ByteString -> IO (Either String ())
+append host portID = genAppend (sendRequestsHP host portID)
 
 get :: HostName -> PortID -> ByteString -> IO (Either String (Maybe ByteString))
 get host portID = genGet (sendRequestsHP host portID)
