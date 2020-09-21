@@ -9,12 +9,17 @@ import Network.Neks.Actions (Request(Set, SetIfNew, Append, Get, Delete, Atomic)
 import qualified Network as Net
 import System.IO (Handle)
 import System.Environment (getArgs)
-import Data.ByteString.Char8 (pack)
+-- import Data.ByteString.Char8 (pack)
+import Data.ByteString.UTF8 (ByteString)
+import qualified Data.ByteString.UTF8 as BSU8
 
 import Control.Monad (when)
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, takeMVar, putMVar)
 import Exception(IOException, catch)
+
+pack ::String -> ByteString
+pack = BSU8.fromString
 
 catchIO :: IO a -> (IOException -> IO a) -> IO a
 catchIO = Exception.catch
@@ -54,6 +59,10 @@ set k v server = do
                 Left error -> putStrLn ("Error setting value: " ++ error)
                 Right [] -> putStrLn "Set successful"
 
+showsReply :: Reply -> ShowS
+showsReply (Found bs) s = foldr (\ x y -> x ++ '\n' : y) s $ "Found:" : map ("  " ++) (lines $ BSU8.toString bs)
+showsReply NotFound s = "Not found\n" ++ s
+
 setIfNew :: String -> String -> Handle -> IO ()
 setIfNew k v server = do
         response <- request server [SetIfNew (pack k) (pack v)]
@@ -73,7 +82,8 @@ get k server = do
         response <- request server [Get (pack k)]
         case response of
                 Left error -> putStrLn ("Error getting value: " ++ error)
-                Right response -> putStrLn ("Response received: " ++ show response)
+                Right [] -> putStrLn "Empty response received."
+                Right response -> putStrLn ("Response received:\n" ++ foldr showsReply "" response)
 
 del :: String -> Handle -> IO ()
 del k server = do
